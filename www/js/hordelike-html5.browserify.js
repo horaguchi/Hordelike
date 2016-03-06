@@ -78,12 +78,17 @@ Hordelike.prototype.initialCanvas = function (element) {
     game.active = false;
   });
 
-  window.addEventListener("keypress", function (e) {
+  window.addEventListener("keydown", function (e) {
     e.preventDefault();
     var key = String.fromCharCode(e.keyCode);
-    
-    if (game.key(key.toLowerCase())) {
-      game.draw();
+    game.keyNow = key;
+  }, false);
+
+  window.addEventListener("keyup", function (e) {
+    e.preventDefault();
+    var key = String.fromCharCode(e.keyCode);
+    if (game.keyNow === key) {
+      game.keyNow = '_';
     }
   }, false);
 
@@ -95,6 +100,12 @@ Hordelike.prototype.initialCanvas = function (element) {
       game.resizeCanvas();
     }, 100);
   });
+
+  this.mainInterval = window.setInterval(function () {
+    if (game.key(game.keyNow.toLowerCase())) {
+      game.draw();
+    }
+  },200);
 };
 
 Hordelike.prototype.startAnimation = function () {
