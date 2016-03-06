@@ -1,0 +1,41 @@
+{
+  "name": "Hordelike",
+  "version": "0.0.1",
+  "description": "A hordelike roguelike",
+  "keywords": [
+    "roguelike",
+    "turn-based",
+    "strategy",
+    "TBS",
+    "game"
+  ],
+  "homepage": "https://github.com/horaguchi/Hordelike",
+  "bugs": {
+    "url": "https://github.com/horaguchi/Hordelike/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "Koji Horaguchi <koji.horaguchi@gmail.com> (http://horaguchi.github.io/)",
+  "main": "./hordelike.js",
+  "bin": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/horaguchi/Hordelike.git"
+  },
+  "scripts": {
+    "start": "browserify hordelike-html5.js -s Hordelike -o www/js/hordelike-html5.browserify.js && cordova run browser"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "blessed": "0.1.81",
+    "chance": "1.0.1",
+    "pathfinding": "0.4.17"
+  },
+  "devDependencies": {
+    "browserify": "13.0.0",
+    "cordova": "6.0.0",
+    "gettext-parser": "1.1.2"
+  }
+}
