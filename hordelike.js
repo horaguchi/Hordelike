@@ -17,14 +17,17 @@ var Hordelike = function () {
   this.status = {};
   this.status.health = 10;
   this.status.healthMax = 10;
-  this.status.moveSpeed = 10;
+  this.status.moveSpeed = 8;
+  this.status.moveCD = 0;
 
   this.status.power = 10;
   this.status.capacity = 10;
   this.status.capacityMax = 10;
   this.status.ammo = 100;
   this.status.fireSpeed = 10;
-  this.status.reload = 10;
+  this.status.fireCD = 0;
+  this.status.reloadSpeed = 10;
+  this.status.reloadCD = 0;
   this.status.rangeType = "A";
 
   this.status.wait = 10;
@@ -41,9 +44,9 @@ var Hordelike_MANUAL_LINE_STR = 'WASD - move, F - fire, R - reload, E - equip an
 
 Hordelike.prototype.getScreen = function () {
   var status = this.status;
-  var status_str = 'WAVE:' + this.wave + ' TIME:' + this.time + ' HP:' + status.health + '/' + status.healthMax + ' SPD:' + status.moveSpeed;
+  var status_str = 'WAVE:' + this.wave + ' TIME:' + Math.floor(this.time / 10) + ' HP:' + status.health + '/' + status.healthMax + ' SPD:' + status.moveSpeed;
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.capacity + '/' + status.capacityMax + '/' + status.ammo;
-  weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reload + ' RNG:' + status.rangeType;
+  weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed + ' RNG:' + status.rangeType;
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
   return [ status_str.split(''), Hordelike_MANUAL_LINE_STR.split('') ].concat(this.screen);
 };
@@ -53,9 +56,13 @@ Hordelike.prototype.move = function (move_x, move_y) {
   if (new_x < 0 || 96 <= new_x || new_y < 0 || 25 <= new_y) {
     return false;
   }
+  if (this.time <= this.status.moveCD) {
+    return false;
+  }
   this.screen[this.y][this.x] = ' ';
   this.screen[new_y][new_x] = '@';
   this.x = new_x; this.y = new_y;
+  this.status.moveCD = this.time + this.status.moveSpeed;
   return true;
 };
 
@@ -69,6 +76,11 @@ Hordelike.prototype.key = function (key_str) {
   } else if (key_str === 'd') {
     return this.move(1, 0);
   }
+  return true;
+};
+
+Hordelike.prototype.turn = function () {
+  this.time++;
   return true;
 };
 

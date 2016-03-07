@@ -101,10 +101,10 @@ Hordelike.prototype.initialCanvas = function (element) {
   });
 
   this.mainInterval = window.setInterval(function () {
-    if (game.key(game.keyNow.toLowerCase())) {
-      game.draw();
-    }
-  },200);
+    game.key(game.keyNow.toLowerCase());
+    game.turn();
+    game.draw();
+  }, 50);
 };
 
 Hordelike.prototype.startAnimation = function () {
