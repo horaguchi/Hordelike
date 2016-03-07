@@ -102,7 +102,7 @@ Hordelike.prototype.initialCanvas = function (element) {
   });
 
   this.mainInterval = window.setInterval(function () {
-    game.key(game.keyNow.toLowerCase());
+    game.key((game.keyNow || '').toLowerCase());
     game.turn();
     game.draw();
   }, 50);
@@ -305,17 +305,14 @@ var Hordelike = function () {
   this.status.moveCD = 0;
 
   this.status.power = 10;
+  this.status.magazine = 10;
   this.status.capacity = 10;
-  this.status.capacityMax = 10;
   this.status.ammo = 100;
-  this.status.fireSpeed = 10;
+  this.status.fireSpeed = 4;
   this.status.fireCD = 0;
-  this.status.reloadSpeed = 10;
+  this.status.reloadSpeed = 16;
   this.status.reloadCD = 0;
   this.status.rangeType = "A";
-
-  this.status.wait = 10;
-  this.status.waitType = "none";
 };
 // for node.js, not for CommonJS
 module.exports = Hordelike;
@@ -329,10 +326,27 @@ var Hordelike_MANUAL_LINE_STR = 'WASD - move, F - fire, R - reload, E - equip an
 Hordelike.prototype.getScreen = function () {
   var status = this.status;
   var status_str = 'WAVE:' + this.wave + ' TIME:' + Math.floor(this.time / 10) + ' HP:' + status.health + '/' + status.healthMax + ' SPD:' + status.moveSpeed;
-  var weapon_str = 'POW:' + status.power + ' CAP:' + status.capacity + '/' + status.capacityMax + '/' + status.ammo;
+  var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/' + status.ammo;
   weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed + ' RNG:' + status.rangeType;
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
   return [ status_str.split(''), Hordelike_MANUAL_LINE_STR.split('') ].concat(this.screen);
+};
+
+Hordelike.prototype.key = function (key_str) {
+  if (key_str === 'w') {
+    return this.move(0, -1);
+  } else if (key_str === 'a') {
+    return this.move(-1, 0);
+  } else if (key_str === 's') {
+    return this.move(0, 1);
+  } else if (key_str === 'd') {
+    return this.move(1, 0);
+  } else if (key_str === 'f') {
+    return this.fire();
+  } else if (key_str === 'r') {
+    return this.reload();
+  }
+  return true;
 };
 
 Hordelike.prototype.move = function (move_x, move_y) {
@@ -350,16 +364,31 @@ Hordelike.prototype.move = function (move_x, move_y) {
   return true;
 };
 
-Hordelike.prototype.key = function (key_str) {
-  if (key_str === 'w') {
-    return this.move(0, -1);
-  } else if (key_str === 'a') {
-    return this.move(-1, 0);
-  } else if (key_str === 's') {
-    return this.move(0, 1);
-  } else if (key_str === 'd') {
-    return this.move(1, 0);
+Hordelike.prototype.fire = function () {
+  if (this.status.magazine === 0) {
+    return false;
+  } else if (this.time <= this.status.fireCD) {
+    return false;
+  } else if (this.time <= this.status.reloadCD) {
+    return false;
   }
+  this.status.magazine--;
+  this.status.fireCD = this.time + this.status.fireSpeed;  
+  return true;
+};
+
+Hordelike.prototype.reload = function () {
+  if (this.status.ammo === 0) {
+    return false;
+  } else if (this.status.magazine === this.status.capacity) {
+    return false;
+  } else if (this.time <= this.status.reloadCD) {
+    return false;
+  }
+  this.status.magazine += this.status.ammo;
+  this.status.ammo = Math.max(this.status.magazine - this.status.capacity, 0);
+  this.status.magazine -= this.status.ammo;
+  this.status.reloadCD = this.time + this.status.reloadSpeed;
   return true;
 };
 

@@ -101,7 +101,7 @@ Hordelike.prototype.initialCanvas = function (element) {
   });
 
   this.mainInterval = window.setInterval(function () {
-    game.key(game.keyNow.toLowerCase());
+    game.key((game.keyNow || '').toLowerCase());
     game.turn();
     game.draw();
   }, 50);
