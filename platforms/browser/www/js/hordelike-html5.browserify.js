@@ -301,7 +301,7 @@ var Hordelike = function () {
   this.status = {};
   this.status.health = 10;
   this.status.healthMax = 10;
-  this.status.moveSpeed = 8;
+  this.status.moveSpeed = 6;
   this.status.moveCD = 0;
 
   this.status.power = 10;
@@ -312,7 +312,9 @@ var Hordelike = function () {
   this.status.fireCD = 0;
   this.status.reloadSpeed = 16;
   this.status.reloadCD = 0;
-  this.status.rangeType = "A";
+  this.status.rangeType = 'A';
+
+  this.enemies = [];
 };
 // for node.js, not for CommonJS
 module.exports = Hordelike;
@@ -331,6 +333,7 @@ Hordelike.prototype.getScreen = function () {
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
   return [ status_str.split(''), Hordelike_MANUAL_LINE_STR.split('') ].concat(this.screen);
 };
+
 
 Hordelike.prototype.key = function (key_str) {
   if (key_str === 'w') {
@@ -353,14 +356,52 @@ Hordelike.prototype.move = function (move_x, move_y) {
   var new_x = this.x + move_x, new_y = this.y + move_y;
   if (new_x < 0 || 96 <= new_x || new_y < 0 || 25 <= new_y) {
     return false;
-  }
-  if (this.time <= this.status.moveCD) {
+  } else if (this.time <= this.status.moveCD) {
+    return false;
+  } else if (this.screen[new_y][new_x] !== ' ') {
     return false;
   }
   this.screen[this.y][this.x] = ' ';
   this.screen[new_y][new_x] = '@';
   this.x = new_x; this.y = new_y;
   this.status.moveCD = this.time + this.status.moveSpeed;
+  return true;
+};
+
+Hordelike.prototype.enemyMove = function (enemy) {
+  if (this.time <= enemy.status.moveCD) {
+    return false;
+  }
+  var x_abs = Math.abs(this.x - enemy.x);
+  var y_abs = Math.abs(this.y - enemy.y);
+  if (x_abs === 0 && y_abs === 1) {
+    return false;
+  } else if (x_abs === 1 && y_abs === 0) {
+    return false;
+  }
+  var new_x = this.x < enemy.x ? enemy.x - 1 : enemy.x + 1;
+  var new_y = this.y < enemy.y ? enemy.y - 1 : enemy.y + 1;
+  if (this.screen[new_y][enemy.x] !== ' ' && this.screen[enemy.y][new_x] !== ' ') {
+    return false;
+  } else if (this.screen[new_y][enemy.x] === ' ' && this.screen[enemy.y][new_x] !== ' ') {
+    new_x = enemy.x;
+  } else if (this.screen[new_y][enemy.x] !== ' ' && this.screen[enemy.y][new_x] === ' ') {
+    new_y = enemy.y;
+  } else if (x_abs === y_abs) {
+    if (Math.random() < 0.5) {
+      new_x = enemy.x;
+    } else {
+      new_y = enemy.y;
+    }
+  } else if (x_abs < y_abs) {
+    new_x = enemy.x;
+  } else {
+    new_y = enemy.y;
+  }
+  this.screen[enemy.y][enemy.x] = ' ';
+  this.screen[new_y][new_x] = enemy.type;
+  enemy.x = new_x; enemy.y = new_y;
+  enemy.status.moveCD = this.time + enemy.status.moveSpeed;
   return true;
 };
 
@@ -394,7 +435,38 @@ Hordelike.prototype.reload = function () {
 
 Hordelike.prototype.turn = function () {
   this.time++;
+  if (this.time % 100 === 0) {
+    this.createEnemy();
+  }
+  this.enemies.forEach(function (enemy) {
+    this.enemyMove(enemy);
+  }, this);
   return true;
+};
+
+Hordelike.prototype.createEnemy = function () {
+  var enemy = {};
+  enemy.x = 0;
+  enemy.y = 0;
+  enemy.type = 'Z';
+  enemy.status = {};
+  enemy.status.health = 10;
+  enemy.status.healthMax = 10;
+  enemy.status.moveSpeed = 8;
+  enemy.status.moveCD = 0;
+
+  enemy.status.power = 10;
+  enemy.status.magazine = 10;
+  enemy.status.capacity = 10;
+  enemy.status.ammo = 100;
+  enemy.status.fireSpeed = 4;
+  enemy.status.fireCD = 0;
+  enemy.status.reloadSpeed = 16;
+  enemy.status.reloadCD = 0;
+  enemy.status.rangeType = 'A';
+
+  this.enemies.push(enemy);
+  this.screen[enemy.y][enemy.x] = enemy.type;
 };
 
 Hordelike.prototype.point = function (x, y) {
