@@ -43,13 +43,18 @@ var Hordelike_MANUAL_LINE_STR = 'WASD - move, F - fire, R - reload, E - equip an
 
 Hordelike.prototype.getScreen = function () {
   var status = this.status;
+  var px = this.x, py = this.y;
+  var time = this.time;
   var status_str = 'WAVE:' + this.wave + ' TIME:' + Math.floor(this.time / 10) + ' HP:' + status.health + '/' + status.healthMax + ' SPD:' + status.moveSpeed;
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/' + status.ammo;
   weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed + ' RNG:' + status.rangeType;
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
-  return [ status_str.split(''), Hordelike_MANUAL_LINE_STR.split('') ].concat(this.screen);
+  return [ status_str.split(''), Hordelike_MANUAL_LINE_STR.split('') ].concat(this.screen.map(function (row, y) {
+    return row.map(function (tile, x) {
+      return tile === ' ' && (Math.abs(x - px) + Math.abs(y - py) < Math.floor((time - status.moveCD) / status.moveSpeed)) ? '.' : tile;
+    });
+  }));
 };
-
 
 Hordelike.prototype.key = function (key_str) {
   if (key_str === 'w') {
