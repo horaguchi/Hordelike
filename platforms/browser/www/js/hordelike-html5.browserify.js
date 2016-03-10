@@ -312,15 +312,15 @@ var Hordelike = function () {
   this.status.fireCD = 0;
   this.status.reloadSpeed = 16;
   this.status.reloadCD = 0;
-  this.status.rangeType = 'A';
+  this.status.rangeSpeed = 18;
+  this.status.rangeMin = 3;
+  this.status.rangeMax = 5;
+  this.status.rangeType = 'B';
 
   this.enemies = [];
 };
 // for node.js, not for CommonJS
 module.exports = Hordelike;
-
-var Hordelike_PLAYER_X = 27;    // less is harder
-var Hordelike_PLAYER_Y = 30;     // less is harder
 
 var Hordelike_EMPTY_LINE_STR = '                                                                                                ';
 var Hordelike_MANUAL_LINE_STR = 'WASD - move, F - fire, R - reload, E - equip an item' + Hordelike_EMPTY_LINE_STR;
@@ -329,13 +329,20 @@ Hordelike.prototype.getScreen = function () {
   var status = this.status;
   var px = this.x, py = this.y;
   var time = this.time;
-  var status_str = 'WAVE:' + this.wave + ' TIME:' + Math.floor(this.time / 10) + ' HP:' + status.health + '/' + status.healthMax + ' SPD:' + status.moveSpeed;
+  var status_str = 'WAVE:' + this.wave + ' TIME:' + Math.floor(time / 10) + ' HP:' + status.health + '/' + status.healthMax + ' SPD:' + status.moveSpeed;
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/' + status.ammo;
   weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed + ' RNG:' + status.rangeType;
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
   return [ status_str.split(''), Hordelike_MANUAL_LINE_STR.split('') ].concat(this.screen.map(function (row, y) {
     return row.map(function (tile, x) {
-      return tile === ' ' && (Math.abs(x - px) + Math.abs(y - py) < Math.floor((time - status.moveCD) / status.moveSpeed)) ? '.' : tile;
+      var is_range = false;
+      var range_num = status.rangeMin + Math.min(status.rangeMax, Math.floor(Math.max(0, (time - status.moveCD)) / status.rangeSpeed));
+      if (status.rangeType === 'A' && Math.abs(x - px) + Math.abs(y - py) < range_num) {
+        is_range = true;
+      } else if (status.rangeType === 'B' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
+        is_range = true;
+      }
+      return tile === ' ' && is_range ? '.' : tile;
     });
   }));
 };
@@ -418,6 +425,11 @@ Hordelike.prototype.fire = function () {
   } else if (this.time <= this.status.reloadCD) {
     return false;
   }
+  var enemy = this.enemies[0];
+  if (enemy) {
+    enemy.dead = true;
+    this.screen[enemy.y][enemy.x] = ' ';
+  }
   this.status.magazine--;
   this.status.fireCD = this.time + this.status.fireSpeed;  
   return true;
@@ -443,8 +455,11 @@ Hordelike.prototype.turn = function () {
   if (this.time % 100 === 0) {
     this.createEnemy();
   }
-  this.enemies.forEach(function (enemy) {
-    this.enemyMove(enemy);
+  this.enemies = this.enemies.filter(function (enemy) {
+    if (!enemy.dead) {
+      this.enemyMove(enemy);
+      return true;
+    }
   }, this);
   return true;
 };
