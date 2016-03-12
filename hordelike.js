@@ -27,7 +27,7 @@ var Hordelike = function () {
   this.status = {};
   this.status.health = 10;
   this.status.healthMax = 10;
-  this.status.moveSpeed = 6;
+  this.status.moveSpeed = 4;
   this.status.moveCD = 0;
 
   this.status.symbol = '/';

@@ -311,7 +311,7 @@ var Hordelike = function () {
   this.status = {};
   this.status.health = 10;
   this.status.healthMax = 10;
-  this.status.moveSpeed = 6;
+  this.status.moveSpeed = 4;
   this.status.moveCD = 0;
 
   this.status.symbol = '/';
@@ -343,7 +343,7 @@ Hordelike.prototype.getScreen = function () {
   var status_str = 'WAVE:' + this.wave + ' TIME:' + Math.floor(time / 10) + ' HP:' + status.health + '/' + status.healthMax + ' SPD:' + status.moveSpeed;
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/' + status.ammo;
   weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + (time <= status.reloadCD ? status.reloadCD - time : status.reloadSpeed);
-  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeMin + '/' + status.rangeMax;
+  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '-' + status.rangeMax;
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
   var items = this.items;
   return [ status_str.split(''), (this.message + Hordelike_EMPTY_LINE_STR).split('') ].concat(this.screen.map(function (row, y) {
@@ -407,7 +407,7 @@ Hordelike.prototype.move = function (move_x, move_y) {
     var status = this.items[new_y][new_x];
     var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
     weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed;
-    weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeMin + '/' + status.rangeMax;
+    weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '-' + status.rangeMax;
     message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
     this.message = message;
   } else {
@@ -559,7 +559,7 @@ Hordelike.prototype.equip = function () {
   var status = old_weapon;
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
   weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed;
-  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeMin + '/' + status.rangeMax;
+  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '-' + status.rangeMax;
   message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
   this.message = message;
 
