@@ -15,7 +15,7 @@ var Hordelike = function () {
     }
     items.push(item_row);
   }
-  this.comment = Hordelike_MANUAL_LINE_STR;
+  this.message = Hordelike_MANUAL_LINE_STR;
 
   this.x = 48;
   this.y = 13;
@@ -60,7 +60,7 @@ Hordelike.prototype.getScreen = function () {
   weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + (time <= status.reloadCD ? status.reloadCD - time : status.reloadSpeed) + ' RNG:' + status.rangeType;
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
   var items = this.items;
-  return [ status_str.split(''), (this.comment + Hordelike_EMPTY_LINE_STR).split('') ].concat(this.screen.map(function (row, y) {
+  return [ status_str.split(''), (this.message + Hordelike_EMPTY_LINE_STR).split('') ].concat(this.screen.map(function (row, y) {
     return row.map(function (tile, x) {
       if (tile !== ' ') {
         return tile;
@@ -101,12 +101,12 @@ Hordelike.prototype.key = function (key_str) {
 Hordelike.prototype.move = function (move_x, move_y) {
   var new_x = this.x + move_x, new_y = this.y + move_y;
   if (new_x < 0 || 96 <= new_x || new_y < 0 || 25 <= new_y) {
-    this.comment = 'Blocked';
+    this.message = 'Blocked';
     return false;
   } else if (this.time <= this.status.moveCD) {
     return false;
   } else if (this.screen[new_y][new_x] !== ' ') {
-    this.comment = 'Blocked';
+    this.message = 'Blocked';
     return false;
   }
   this.screen[this.y][this.x] = ' ';
@@ -114,9 +114,9 @@ Hordelike.prototype.move = function (move_x, move_y) {
   this.x = new_x; this.y = new_y;
   this.status.moveCD = this.time + this.status.moveSpeed;
   if (this.items[new_y][new_x]) {
-    this.comment = 'Item Found';
+    this.message = 'Item Found';
   } else {
-    this.comment = '';
+    this.message = '';
   }
   return true;
 };
@@ -160,12 +160,12 @@ Hordelike.prototype.enemyMove = function (enemy) {
 
 Hordelike.prototype.fire = function () {
   if (this.status.magazine === 0) {
-    this.comment = 'You need to reload.';
+    this.message = 'You need to reload.';
     return false;
   } else if (this.time <= this.status.fireCD) {
     return false;
   } else if (this.time <= this.status.reloadCD) {
-    this.comment = "You are reloading.";
+    this.message = "You are reloading.";
     return false;
   }
   var enemy = this.enemies[0];
@@ -173,9 +173,9 @@ Hordelike.prototype.fire = function () {
     enemy.dead = true;
     this.screen[enemy.y][enemy.x] = ' ';
     this.items[enemy.y][enemy.x] = { toString: function () { return '%'; } };
-    this.comment = 'You shooted an enemy.';
+    this.message = 'You shooted an enemy.';
   } else {
-    this.comment = 'It did not hit.';
+    this.message = 'It did not hit.';
   }
   this.status.magazine--;
   this.status.fireCD = this.time + this.status.fireSpeed;
@@ -188,14 +188,14 @@ Hordelike.prototype.reload = function () {
   } else if (this.time <= this.status.reloadCD) {
     return false;
   } else if (this.status.magazine === this.status.capacity) {
-    this.comment = "You don't need to reload.";
+    this.message = "You don't need to reload.";
     return false;
   }
   this.status.magazine += this.status.ammo;
   this.status.ammo = Math.max(this.status.magazine - this.status.capacity, 0);
   this.status.magazine -= this.status.ammo;
   this.status.reloadCD = this.time + this.status.reloadSpeed;
-  this.comment = "You are reloading.";
+  this.message = "You are reloading.";
   return true;
 };
 
