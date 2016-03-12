@@ -314,6 +314,7 @@ var Hordelike = function () {
   this.status.moveSpeed = 6;
   this.status.moveCD = 0;
 
+  this.status.symbol = '/';
   this.status.power = 10;
   this.status.magazine = 10;
   this.status.capacity = 10;
@@ -349,7 +350,7 @@ Hordelike.prototype.getScreen = function () {
       if (tile !== ' ') {
         return tile;
       } else if (items[y][x]) {
-        return items[y][x].toString();
+        return items[y][x].symbol;
       }
       var is_range = false;
       var range_num = status.rangeMin + Math.min(status.rangeMax, Math.floor(Math.max(0, (time - status.moveCD)) / status.rangeSpeed));
@@ -398,7 +399,12 @@ Hordelike.prototype.move = function (move_x, move_y) {
   this.x = new_x; this.y = new_y;
   this.status.moveCD = this.time + this.status.moveSpeed;
   if (this.items[new_y][new_x]) {
-    this.message = 'Item Found';
+    var message = 'E - equip --> ';
+    var status = this.items[new_y][new_x];
+    var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
+    weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed + ' RNG:' + status.rangeType;
+    message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
+    this.message = message;
   } else {
     this.message = '';
   }
@@ -456,7 +462,17 @@ Hordelike.prototype.fire = function () {
   if (enemy) {
     enemy.dead = true;
     this.screen[enemy.y][enemy.x] = ' ';
-    this.items[enemy.y][enemy.x] = { toString: function () { return '%'; } };
+    var weapon = {};
+    weapon.symbol      = enemy.status.symbol;
+    weapon.power       = enemy.status.power;
+    weapon.magazine    = enemy.status.magazine;
+    weapon.capacity    = enemy.status.capacity;
+    weapon.fireSpeed   = enemy.status.fireSpeed;
+    weapon.reloadSpeed = enemy.status.reloadSpeed;
+    weapon.rangeMin    = enemy.status.rangeMin;
+    weapon.rangeMax    = enemy.status.rangeMax;
+    weapon.rangeType   = enemy.status.rangeType;
+    this.items[enemy.y][enemy.x] = weapon;
     this.message = 'You shooted an enemy.';
   } else {
     this.message = 'It did not hit.';
@@ -508,6 +524,7 @@ Hordelike.prototype.createEnemy = function () {
   enemy.status.moveSpeed = 8;
   enemy.status.moveCD = 0;
 
+  enemy.status.symbol = '|';
   enemy.status.power = 10;
   enemy.status.magazine = 10;
   enemy.status.capacity = 10;
@@ -516,6 +533,8 @@ Hordelike.prototype.createEnemy = function () {
   enemy.status.fireCD = 0;
   enemy.status.reloadSpeed = 16;
   enemy.status.reloadCD = 0;
+  enemy.status.rangeMin = 1;
+  enemy.status.rangeMax = 10;
   enemy.status.rangeType = 'A';
 
   this.enemies.push(enemy);
