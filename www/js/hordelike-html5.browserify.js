@@ -367,28 +367,31 @@ Hordelike.prototype.getScreen = function () {
 };
 
 Hordelike.prototype.key = function (key_str) {
-  if (key_str === 'w') {
+  if (key_str === 'w' || key_str === 'k') {
     return this.move(0, -1);
-  } else if (key_str === 'a') {
+  } else if (key_str === 'a' || key_str === 'h') {
     return this.move(-1, 0);
-  } else if (key_str === 's') {
+  } else if (key_str === 's' || key_str === 'j') {
     return this.move(0, 1);
-  } else if (key_str === 'd') {
+  } else if (key_str === 'd' || key_str === 'l') {
     return this.move(1, 0);
   } else if (key_str === 'f') {
     return this.fire();
   } else if (key_str === 'r') {
     return this.reload();
+  } else if (key_str === 'e') {
+    return this.equip();
   }
+
   return true;
 };
 
 Hordelike.prototype.move = function (move_x, move_y) {
   var new_x = this.x + move_x, new_y = this.y + move_y;
-  if (new_x < 0 || 96 <= new_x || new_y < 0 || 25 <= new_y) {
-    this.message = 'Blocked';
+  if (this.time <= this.status.moveCD) {
     return false;
-  } else if (this.time <= this.status.moveCD) {
+  } else if (new_x < 0 || 96 <= new_x || new_y < 0 || 25 <= new_y) {
+    this.message = 'Blocked';
     return false;
   } else if (this.screen[new_y][new_x] !== ' ') {
     this.message = 'Blocked';
@@ -449,10 +452,10 @@ Hordelike.prototype.enemyMove = function (enemy) {
 };
 
 Hordelike.prototype.fire = function () {
-  if (this.status.magazine === 0) {
-    this.message = 'You need to reload.';
+  if (this.time <= this.status.fireCD) {
     return false;
-  } else if (this.time <= this.status.fireCD) {
+  } else if (this.status.magazine === 0) {
+    this.message = 'You need to reload.';
     return false;
   } else if (this.time <= this.status.reloadCD) {
     this.message = "You are reloading.";
@@ -462,17 +465,7 @@ Hordelike.prototype.fire = function () {
   if (enemy) {
     enemy.dead = true;
     this.screen[enemy.y][enemy.x] = ' ';
-    var weapon = {};
-    weapon.symbol      = enemy.status.symbol;
-    weapon.power       = enemy.status.power;
-    weapon.magazine    = enemy.status.magazine;
-    weapon.capacity    = enemy.status.capacity;
-    weapon.fireSpeed   = enemy.status.fireSpeed;
-    weapon.reloadSpeed = enemy.status.reloadSpeed;
-    weapon.rangeMin    = enemy.status.rangeMin;
-    weapon.rangeMax    = enemy.status.rangeMax;
-    weapon.rangeType   = enemy.status.rangeType;
-    this.items[enemy.y][enemy.x] = weapon;
+    this.items[enemy.y][enemy.x] = Hordelike.getWeaponFromStatus(enemy.status);
     this.message = 'You shooted an enemy.';
   } else {
     this.message = 'It did not hit.';
@@ -482,10 +475,37 @@ Hordelike.prototype.fire = function () {
   return true;
 };
 
+Hordelike.getWeaponFromStatus = function (status) {
+  var weapon = {};
+  weapon.symbol      = status.symbol;
+  weapon.power       = status.power;
+  weapon.magazine    = status.magazine;
+  weapon.capacity    = status.capacity;
+  weapon.fireSpeed   = status.fireSpeed;
+  weapon.reloadSpeed = status.reloadSpeed;
+  weapon.rangeMin    = status.rangeMin;
+  weapon.rangeMax    = status.rangeMax;
+  weapon.rangeType   = status.rangeType;
+  return weapon;
+};
+
+Hordelike.setWeaponToStatus = function (status, weapon) {
+  status.symbol      = weapon.symbol;
+  status.power       = weapon.power;
+  status.magazine    = weapon.magazine;
+  status.capacity    = weapon.capacity;
+  status.fireSpeed   = weapon.fireSpeed;
+  status.reloadSpeed = weapon.reloadSpeed;
+  status.rangeMin    = weapon.rangeMin;
+  status.rangeMax    = weapon.rangeMax;
+  status.rangeType   = weapon.rangeType;
+  return status;
+};
+
 Hordelike.prototype.reload = function () {
-  if (this.status.ammo === 0) {
+  if (this.time <= this.status.reloadCD) {
     return false;
-  } else if (this.time <= this.status.reloadCD) {
+  } else if (this.status.ammo === 0) {
     return false;
   } else if (this.status.magazine === this.status.capacity) {
     this.message = "You don't need to reload.";
@@ -496,6 +516,32 @@ Hordelike.prototype.reload = function () {
   this.status.magazine -= this.status.ammo;
   this.status.reloadCD = this.time + this.status.reloadSpeed;
   this.message = "You are reloading.";
+  return true;
+};
+
+Hordelike.prototype.equip = function () {
+  if (this.time <= this.status.fireCD) {
+    return false;
+  } else if (this.time <= this.status.reloadCD) {
+    return false;
+  } else if (this.time <= this.status.moveCD) {
+    return false;
+  } else if (!this.items[this.y][this.x]) {
+    this.message = 'There is nothing here to pick up.';
+    return false;
+  }
+
+  var old_weapon = Hordelike.getWeaponFromStatus(this.status);
+  Hordelike.setWeaponToStatus(this.status, this.items[this.y][this.x]);
+  this.items[this.y][this.x] = old_weapon;
+
+  var message = 'E - equip --> ';
+  var status = old_weapon;
+  var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
+  weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed + ' RNG:' + status.rangeType;
+  message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
+  this.message = message;
+
   return true;
 };
 
