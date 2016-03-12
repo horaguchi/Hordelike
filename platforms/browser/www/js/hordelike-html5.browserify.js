@@ -291,6 +291,15 @@ var Hordelike = function () {
     }
     screen.push(row);
   }
+  var items = this.items = [];
+  for (var y = 0; y < 25; ++y) { // status line is 2
+    var item_row = [];
+    for (var x = 0; x < 96; ++x) {
+      item_row.push(false);
+    }
+    items.push(item_row);
+  }
+
   this.x = 48;
   this.y = 13;
   screen[this.y][this.x] = '@';
@@ -333,8 +342,14 @@ Hordelike.prototype.getScreen = function () {
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/' + status.ammo;
   weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed + ' RNG:' + status.rangeType;
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
+  var items = this.items;
   return [ status_str.split(''), Hordelike_MANUAL_LINE_STR.split('') ].concat(this.screen.map(function (row, y) {
     return row.map(function (tile, x) {
+      if (tile !== ' ') {
+        return tile;
+      } else if (items[y][x]) {
+        return items[y][x].toString();
+      }
       var is_range = false;
       var range_num = status.rangeMin + Math.min(status.rangeMax, Math.floor(Math.max(0, (time - status.moveCD)) / status.rangeSpeed));
       if (status.rangeType === 'A' && Math.abs(x - px) + Math.abs(y - py) < range_num) {
@@ -342,7 +357,7 @@ Hordelike.prototype.getScreen = function () {
       } else if (status.rangeType === 'B' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
         is_range = true;
       }
-      return tile === ' ' && is_range ? '.' : tile;
+      return is_range ? '.' : tile;
     });
   }));
 };
@@ -429,6 +444,7 @@ Hordelike.prototype.fire = function () {
   if (enemy) {
     enemy.dead = true;
     this.screen[enemy.y][enemy.x] = ' ';
+    this.items[enemy.y][enemy.x] = { toString: function () { return '%'; } };
   }
   this.status.magazine--;
   this.status.fireCD = this.time + this.status.fireSpeed;  
