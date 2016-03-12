@@ -342,7 +342,8 @@ Hordelike.prototype.getScreen = function () {
   var time = this.time;
   var status_str = 'WAVE:' + this.wave + ' TIME:' + Math.floor(time / 10) + ' HP:' + status.health + '/' + status.healthMax + ' SPD:' + status.moveSpeed;
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/' + status.ammo;
-  weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + (time <= status.reloadCD ? status.reloadCD - time : status.reloadSpeed) + ' RNG:' + status.rangeType;
+  weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + (time <= status.reloadCD ? status.reloadCD - time : status.reloadSpeed);
+  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeMin + '/' + status.rangeMax;
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
   var items = this.items;
   return [ status_str.split(''), (this.message + Hordelike_EMPTY_LINE_STR).split('') ].concat(this.screen.map(function (row, y) {
@@ -358,7 +359,7 @@ Hordelike.prototype.getScreen = function () {
         is_range = true;
       } else if (status.rangeType === 'B' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
         is_range = true;
-      } else if (status.rangeType === 'C' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
+      } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) + (Math.abs(y - py) || 0.5)  < range_num) {
         is_range = true;
       }
       return is_range ? '.' : tile;
@@ -405,7 +406,8 @@ Hordelike.prototype.move = function (move_x, move_y) {
     var message = 'E - equip --> ';
     var status = this.items[new_y][new_x];
     var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
-    weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed + ' RNG:' + status.rangeType;
+    weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed;
+    weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeMin + '/' + status.rangeMax;
     message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
     this.message = message;
   } else {
@@ -461,11 +463,29 @@ Hordelike.prototype.fire = function () {
     this.message = "You are reloading.";
     return false;
   }
-  var enemy = this.enemies[0];
+  var status = this.status;
+
+  var enemy = null;
+  var px = this.x, py = this.y;
+  var range_num = status.rangeMin + Math.min(status.rangeMax, Math.floor(Math.max(0, (this.time - status.moveCD)) / status.rangeSpeed));
+  this.enemies.some(function (test_enemy) {
+    var x = test_enemy.x, y = test_enemy.y;
+    if (status.rangeType === 'A' && Math.abs(x - px) + Math.abs(y - py) < range_num) {
+      enemy = test_enemy;
+      return true;
+    } else if (status.rangeType === 'B' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
+      enemy = test_enemy;
+      return true;
+    } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) + (Math.abs(y - py) || 0.5)  < range_num) {
+      enemy = test_enemy;
+      return true;
+    }
+  });
+
   if (enemy) {
     enemy.dead = true;
     this.screen[enemy.y][enemy.x] = ' ';
-    this.items[enemy.y][enemy.x] = Hordelike.getWeaponFromStatus(enemy.status);
+    this.items[enemy.y][enemy.x] = this.items[enemy.y][enemy.x] || Hordelike.getWeaponFromStatus(enemy.status);
     this.message = 'You shooted an enemy.';
   } else {
     this.message = 'It did not hit.';
@@ -538,9 +558,12 @@ Hordelike.prototype.equip = function () {
   var message = 'E - equip --> ';
   var status = old_weapon;
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
-  weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed + ' RNG:' + status.rangeType;
+  weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed;
+  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeMin + '/' + status.rangeMax;
   message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
   this.message = message;
+
+  this.status.moveCD = this.time + this.status.moveSpeed; // equip CD = move CD
 
   return true;
 };
