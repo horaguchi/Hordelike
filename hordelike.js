@@ -41,7 +41,7 @@ var Hordelike = function () {
   this.status.reloadCD = 0;
   this.status.rangeSpeed = 18;
   this.status.rangeMin = 3;
-  this.status.rangeMax = 5;
+  this.status.rangeMax = 2;
   this.status.rangeType = 'B';
 
   this.enemies = [];
@@ -137,15 +137,56 @@ Hordelike.prototype.move = function (move_x, move_y) {
   this.x = new_x; this.y = new_y;
   this.status.moveCD = this.time + this.status.moveSpeed;
   if (this.items[new_y][new_x]) {
-    var message = 'E - equip --> ';
     var status = this.items[new_y][new_x];
-    var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
-    weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed;
-    weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '+' + status.rangeMax;
-    message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
-    this.message = message;
+    if (status.symbol === '%') {
+      var rand = Math.random();
+      if (rand < 0.9) {
+        this.message = "My, that's a yummy corpse. ";
+        if (rand * 100 % 10 < 3) {
+          this.message += "You feel better.";
+          this.status.health = this.status.healthMax;
+        } else if (rand * 100 % 10 < 6) {
+          this.message += "You feel bigger.";
+          this.status.healthMax = this.status.healthMax += 40;
+        } else if (rand * 100 % 10 < 9) {
+          this.message += "You seem faster.";
+          this.status.moveSpeed = Math.max(0, this.status.moveSpeed - 1);
+        } else if (rand * 100 % 10 < 10) {
+          this.message += "A tail has been growing in your gun.";
+          this.status.power += this.wave;
+        }
+      } else {
+        this.message = 'The corpse tastes terrible! ';
+        if (rand * 100 % 10 < 3) {
+          this.message += "You feel smaller.";
+          this.status.healthMax = Math.ceil(this.status.healthMax / 2);
+          this.status.health = Math.min(this.status.healthMax, this.status.health);
+        } else if (rand * 100 % 10 < 6) {
+          this.message += "You seem slower.";
+          this.status.moveSpeed += 2;
+        } else if (rand * 100 % 10 < 9) {
+          this.message += "You can not move for a while.";
+          this.status.moveCD += 1000;
+        } else if (rand * 100 % 10 < 10) {
+          this.message += "Your health point become 1.";
+          this.status.health = 1;
+        }
+      }
+      this.items[new_y][new_x] = null;
+    } else if (status.symbol === '!') {
+      this.message = 'You pick up ammo.';
+      this.status.ammo += Math.ceil( 1 + Math.random() * 10 );
+      this.items[new_y][new_x] = null;
+    } else {
+      var message = 'E - equip --> ';
+      var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
+      weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed;
+      weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '+' + status.rangeMax;
+      message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
+      this.message = message;
+    }
   } else {
-    this.message = '';
+    //this.message = '';
   }
   return true;
 };
@@ -216,16 +257,34 @@ Hordelike.prototype.fire = function () {
     }
   });
 
-  if (enemy) {
-    enemy.dead = true;
-    this.screen[enemy.y][enemy.x] = ' ';
-    this.items[enemy.y][enemy.x] = this.items[enemy.y][enemy.x] || Hordelike.getWeaponFromStatus(enemy.status);
-    this.message = 'You shooted an enemy.';
-  } else {
-    this.message = 'It did not hit.';
-  }
   this.status.magazine--;
   this.status.fireCD = this.time + this.status.fireSpeed;
+
+  var magazine_str = '[';
+  for (var i = 0; i < this.status.capacity; ++i) {
+    magazine_str += i < this.status.magazine ? '*' : '-';
+  }
+  this.message = magazine_str + '] ';
+  if (enemy) {
+    enemy.status.health -= status.power;
+    if (enemy.status.health < 0) {
+      enemy.dead = true;
+      this.screen[enemy.y][enemy.x] = ' ';
+      if (!this.items[enemy.y][enemy.x]) {
+        var rand = Math.random();
+        if (rand < 0.4) {
+          this.items[enemy.y][enemy.x] = { 'symbol': '%' };
+        } else if (rand < 0.7) {
+          this.items[enemy.y][enemy.x] = { 'symbol': '!' };
+        } else if (rand < 0.9) {
+          this.items[enemy.y][enemy.x] = Hordelike.getWeaponFromStatus(enemy.status);
+        }
+      }
+    }
+    this.message += 'You shooted an enemy.';
+  } else {
+    this.message += 'It did not hit.';
+  }
   return true;
 };
 
@@ -338,7 +397,7 @@ Hordelike.prototype.turn = function () {
 
   if (this.time % 1000 === 0) {
     this.wave++;
-    this.spawnRate = 30 + Math.ceil(Math.random() * 50);
+    this.spawnRate = 50 + Math.ceil(Math.random() * 50);
     this.spawnSeed = Math.random();
   } else if (this.time % 1000 < 500) {
     if (this.time % this.spawnRate === 0) {
@@ -355,21 +414,32 @@ Hordelike.prototype.turn = function () {
   return true;
 };
 
-var Hordelike_WAVE_SCALE = 6;
+var Hordelike_WAVE_SCALE = 4;
 Hordelike.prototype.createEnemy = function (rand_num) {
   var enemy = {};
-  enemy.x = 0;
-  enemy.y = 0;
+  if (rand_num * 100 % 4 < 1) {
+    enemy.x = 0; enemy.y = 0;
+  } else if (rand_num * 100 % 4 < 2) {
+    enemy.x = 95; enemy.y = 0;
+  } else if (rand_num * 100 % 4 < 3) {
+    enemy.x = 0; enemy.y = 24;
+  } else if (rand_num * 100 % 4 < 4) {
+    enemy.x = 95; enemy.y = 24;
+  }
   enemy.type = 'Z';
   enemy.status = {};
   enemy.status.health = 10 * (Hordelike_WAVE_SCALE + this.wave) / Hordelike_WAVE_SCALE;
   enemy.status.healthMax = 10 * (Hordelike_WAVE_SCALE + this.wave) / Hordelike_WAVE_SCALE;
   enemy.status.moveSpeed = 10;
   enemy.status.moveCD = 0;
-  if (rand_num < 0.1) {
-    enemy.type = 'V';
-    enemy.status.health = Math.ceil(enemy.status.health * 2);
+  if (rand_num < 0.01) {
+    enemy.type = 'D';
+    enemy.status.health = Math.ceil(enemy.status.health * 3);
     enemy.status.moveSpeed = 6;
+  } else if (rand_num < 0.1) {
+    enemy.type = 'V';
+    enemy.status.health = Math.ceil(enemy.status.health * 1.4);
+    enemy.status.moveSpeed = 8;
   } else if (rand_num < 0.25) {
     enemy.type = 'r';
     enemy.status.health = Math.ceil(enemy.status.health / 2);
@@ -380,14 +450,14 @@ Hordelike.prototype.createEnemy = function (rand_num) {
     enemy.status.moveSpeed = 16;
   } else if (rand_num < 0.75) {
     enemy.type = 'G';
-    enemy.status.health = Math.ceil(enemy.status.health * 1.5);
+    enemy.status.health = Math.ceil(enemy.status.health * 1.2);
     enemy.status.moveSpeed = 12;
   }
 
   enemy.status.symbol = '|';
   enemy.status.power = Math.ceil(10 * (Hordelike_WAVE_SCALE + this.wave) / Hordelike_WAVE_SCALE);
-  enemy.status.magazine = 10;
-  enemy.status.capacity = 10;
+  enemy.status.magazine = 12;
+  enemy.status.capacity = 12;
   enemy.status.ammo = 100;
   enemy.status.fireSpeed = 4;
   enemy.status.fireCD = 0;
@@ -395,28 +465,78 @@ Hordelike.prototype.createEnemy = function (rand_num) {
   enemy.status.reloadCD = 0;
   enemy.status.rangeSpeed = 12;
   enemy.status.rangeMin = 3;
-  enemy.status.rangeMax = 6;
+  enemy.status.rangeMax = 3;
   enemy.status.rangeType = 'A';
 
-  if (rand_num * 100 % 100 < 10) {
-    enemy.status.symbol = '|';
+  if (rand_num * 100 % 10 < 1) {
+    enemy.status.symbol = '-';
     enemy.status.magazine = 6;
     enemy.status.capacity = 6;
     enemy.status.power = Math.ceil(enemy.status.power * 2);
     enemy.status.rangeType = 'A';
-  } else if (rand_num * 100 % 100 < 20) {
-    enemy.status.symbol = '=';
-    enemy.status.magazine = 30;
-    enemy.status.capacity = 30;
-    enemy.status.fireSpeed = 2;
+  } else if (rand_num * 100 % 10 < 2) {
+    enemy.status.symbol = '/';
     enemy.status.power = Math.ceil(enemy.status.power / 2);
+    enemy.status.magazine = 40;
+    enemy.status.capacity = 40;
+    enemy.status.fireSpeed = 2;
+    enemy.status.reloadSpeed = 30;
+    enemy.status.rangeMax = 1;
+    enemy.status.rangeMin = 4;
+    enemy.status.rangeType = 'B';
+  } else if (rand_num * 100 % 10 < 3) {
+    enemy.status.symbol = '|';
+    enemy.status.magazine = 5;
+    enemy.status.capacity = 5;
+    enemy.status.fireSpeed = 12;
+    enemy.status.rangeMax = 10;
+    enemy.status.rangeSpeed = 16;
+    enemy.status.rangeType = 'C';
+  } else if (rand_num * 100 % 10 < 4) {
+    enemy.status.symbol = '/';
+    enemy.status.magazine = 8;
+    enemy.status.capacity = 8;
+    enemy.status.power = Math.ceil(enemy.status.power / 2);
+    enemy.status.rangeMax = 1;
+    enemy.status.rangeMin = 4;
+    enemy.status.rangeType = 'B';
+  } else if (rand_num * 100 % 10 < 5) {
+    enemy.status.symbol = '-';
+    enemy.status.magazine = 4;
+    enemy.status.capacity = 4;
+    enemy.status.reloadSpeed = 1;
     enemy.status.rangeType = 'A';
-  } else if (rand_num * 100 % 100 < 20) {
-    
+  } else if (rand_num * 100 % 10 < 6) {
+    enemy.status.symbol = '-';
+    enemy.status.magazine = 4;
+    enemy.status.capacity = 4;
+    enemy.status.reloadSpeed = 1;
+    enemy.status.rangeType = 'A';
+  } else if (rand_num * 100 % 10 < 7) {
+    enemy.status.symbol = '|';
+    enemy.status.magazine = 5;
+    enemy.status.capacity = 5;
+    enemy.status.power = Math.ceil(enemy.status.power * 0.9);
+    enemy.status.rangeType = 'C';
+  } else if (rand_num * 100 % 10 < 8) {
+    enemy.status.symbol = '/';
+    enemy.status.magazine = 2;
+    enemy.status.capacity = 2;
+    enemy.status.rangeMin = 2;
+    enemy.status.rangeMax = 10;
+    enemy.status.rangeType = 'B';
+  } else if (rand_num * 100 % 10 < 9) {
+    enemy.status.symbol = '|';
+    enemy.status.magazine = 10;
+    enemy.status.capacity = 1000;
+    enemy.status.power = Math.ceil(enemy.status.power * 1.2);
+    enemy.status.rangeType = 'C';
   }
 
-  this.enemies.push(enemy);
-  this.screen[enemy.y][enemy.x] = enemy.type;
+  if (this.screen[enemy.y][enemy.x] === ' ') {
+    this.enemies.push(enemy);
+    this.screen[enemy.y][enemy.x] = enemy.type;
+  }
 };
 
 Hordelike.prototype.point = function (x, y) {

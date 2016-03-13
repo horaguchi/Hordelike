@@ -29,13 +29,10 @@
     "test": "test"
   },
   "dependencies": {
-    "blessed": "0.1.81",
-    "chance": "1.0.1",
-    "pathfinding": "0.4.17"
+    "blessed": "0.1.81"
   },
   "devDependencies": {
     "browserify": "13.0.0",
-    "cordova": "6.0.0",
-    "gettext-parser": "1.1.2"
+    "cordova": "6.0.0"
   }
 }
