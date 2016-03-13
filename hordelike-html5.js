@@ -139,7 +139,7 @@ Hordelike.prototype.resizeCanvas = function () {
   this.fontCanvasElement.setAttribute('height', this.fontY);
   this.fontCanvasContext = this.fontCanvasElement.getContext("2d");
   this.fontCanvasContext.fillStyle = this.fillStyle = 'black';
-  this.fontCanvasContext.font = this.fontY + 'px Monospace';
+  this.fontCanvasContext.font = this.fontY + 'px "Courier New",Courier,monospace';
   this.fontCanvasContext.textAlign = 'center';
   this.fontCanvasContext.textBaseline = 'middle';
 
@@ -158,7 +158,7 @@ Hordelike.prototype.resizeCanvas = function () {
   this.fontFWCanvasElement.setAttribute('height', this.fontY);
   this.fontFWCanvasContext = this.fontFWCanvasElement.getContext("2d");
   this.fontFWCanvasContext.fillStyle = this.fillStyle = 'black';
-  this.fontFWCanvasContext.font = this.fontY + 'px Monospace';
+  this.fontFWCanvasContext.font = this.fontY + 'px "Courier New",Courier,monospace';
   this.fontFWCanvasContext.textAlign = 'center';
   this.fontFWCanvasContext.textBaseline = 'middle';
 
