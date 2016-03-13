@@ -76,7 +76,7 @@ Hordelike.prototype.getScreen = function () {
         is_range = true;
       } else if (status.rangeType === 'B' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
         is_range = true;
-      } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) + (Math.abs(y - py) || 0.5)  < range_num) {
+      } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) * (Math.abs(y - py) || 0.5)  < range_num) {
         is_range = true;
       }
       var is_enemy_range = enemies.some(function (enemy) {
@@ -87,7 +87,7 @@ Hordelike.prototype.getScreen = function () {
           return true;
         } else if (status.rangeType === 'B' && (x - ex) * (x - ex) + (y - ey) * (y - ey) < enemy_range_num * enemy_range_num) {
           return true;
-        } else if (status.rangeType === 'C' && (Math.abs(x - ex) || 0.5) + (Math.abs(y - ey) || 0.5)  < enemy_range_num) {
+        } else if (status.rangeType === 'C' && (Math.abs(x - ex) || 0.5) * (Math.abs(y - ey) || 0.5)  < enemy_range_num) {
           return true;
         }
         return false;
@@ -251,7 +251,7 @@ Hordelike.prototype.fire = function () {
     } else if (status.rangeType === 'B' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
       enemy = test_enemy;
       return true;
-    } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) + (Math.abs(y - py) || 0.5)  < range_num) {
+    } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) * (Math.abs(y - py) || 0.5)  < range_num) {
       enemy = test_enemy;
       return true;
     }
@@ -301,7 +301,7 @@ Hordelike.prototype.enemyFire = function (enemy) {
     is_range = true;
   } else if (status.rangeType === 'B' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
     is_range = true;
-  } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) + (Math.abs(y - py) || 0.5)  < range_num) {
+  } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) * (Math.abs(y - py) || 0.5)  < range_num) {
     is_range = true;
   }
   if (!is_range) {
@@ -531,6 +531,20 @@ Hordelike.prototype.createEnemy = function (rand_num) {
     enemy.status.capacity = 1000;
     enemy.status.power = Math.ceil(enemy.status.power * 1.2);
     enemy.status.rangeType = 'C';
+  }
+
+  // Bonus
+  if (rand_num * 1000 % 11 < 1) {
+    enemy.status.capacity += 2;
+  }
+  if (rand_num * 1000 % 13 < 1) {
+    enemy.status.rangeMax += 1;
+  }
+  if (rand_num * 1000 % 17 < 1) {
+    enemy.status.rangeMin += 1;
+  }
+  if (rand_num * 1000 % 19 < 1) {
+    enemy.status.power += this.wave;
   }
 
   if (this.screen[enemy.y][enemy.x] === ' ') {
