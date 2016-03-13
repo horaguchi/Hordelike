@@ -10,6 +10,7 @@ Hordelike.prototype.initialCanvas = function (element) {
 
   Hordelike.ins = this;
   var game = this;
+  /*
   var lastPoint = game.lastPoint = [];
   this.canvasElement.addEventListener('touchstart', function (e) {
     e.preventDefault();
@@ -19,7 +20,6 @@ Hordelike.prototype.initialCanvas = function (element) {
     lastPoint[1] = point[1];
     game.touchNow = point;
     game.active = true;
-    game.startAnimation();
   });
 
   this.canvasElement.addEventListener('touchmove', function (e) {
@@ -52,7 +52,6 @@ Hordelike.prototype.initialCanvas = function (element) {
     lastPoint[0] = point[0];
     lastPoint[1] = point[1];
     game.active = true;
-    game.startAnimation();
   });
 
   this.canvasElement.addEventListener('mousemove', function (e) {
@@ -76,6 +75,7 @@ Hordelike.prototype.initialCanvas = function (element) {
     e.preventDefault();
     game.active = false;
   });
+  */
 
   window.addEventListener("keydown", function (e) {
     e.preventDefault();
@@ -105,22 +105,6 @@ Hordelike.prototype.initialCanvas = function (element) {
     game.turn();
     game.draw();
   }, 50);
-};
-
-Hordelike.prototype.startAnimation = function () {
-  var lastPoint = this.lastPoint;
-  var game = this;
-  if (game.active && game.point(lastPoint[0], lastPoint[1])) {
-    game.draw();
-  }
-  if (this.animationInterval) {
-    window.clearInterval(this.animationInterval);
-  }
-  this.animationInterval = window.setInterval(function () {
-    if (game.active && game.point(lastPoint[0], lastPoint[1])) {
-      game.draw();
-    }
-  }, 200);
 };
 
 Hordelike.FONT_MAP_SIZE = 50; // font map is for pre-rendering area, 50 x 50 is reserved in the default

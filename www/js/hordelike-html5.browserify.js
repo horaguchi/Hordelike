@@ -11,6 +11,7 @@ Hordelike.prototype.initialCanvas = function (element) {
 
   Hordelike.ins = this;
   var game = this;
+  /*
   var lastPoint = game.lastPoint = [];
   this.canvasElement.addEventListener('touchstart', function (e) {
     e.preventDefault();
@@ -20,7 +21,6 @@ Hordelike.prototype.initialCanvas = function (element) {
     lastPoint[1] = point[1];
     game.touchNow = point;
     game.active = true;
-    game.startAnimation();
   });
 
   this.canvasElement.addEventListener('touchmove', function (e) {
@@ -53,7 +53,6 @@ Hordelike.prototype.initialCanvas = function (element) {
     lastPoint[0] = point[0];
     lastPoint[1] = point[1];
     game.active = true;
-    game.startAnimation();
   });
 
   this.canvasElement.addEventListener('mousemove', function (e) {
@@ -77,6 +76,7 @@ Hordelike.prototype.initialCanvas = function (element) {
     e.preventDefault();
     game.active = false;
   });
+  */
 
   window.addEventListener("keydown", function (e) {
     e.preventDefault();
@@ -106,22 +106,6 @@ Hordelike.prototype.initialCanvas = function (element) {
     game.turn();
     game.draw();
   }, 50);
-};
-
-Hordelike.prototype.startAnimation = function () {
-  var lastPoint = this.lastPoint;
-  var game = this;
-  if (game.active && game.point(lastPoint[0], lastPoint[1])) {
-    game.draw();
-  }
-  if (this.animationInterval) {
-    window.clearInterval(this.animationInterval);
-  }
-  this.animationInterval = window.setInterval(function () {
-    if (game.active && game.point(lastPoint[0], lastPoint[1])) {
-      game.draw();
-    }
-  }, 200);
 };
 
 Hordelike.FONT_MAP_SIZE = 50; // font map is for pre-rendering area, 50 x 50 is reserved in the default
@@ -309,8 +293,8 @@ var Hordelike = function () {
   this.time = 0;
 
   this.status = {};
-  this.status.health = 10;
-  this.status.healthMax = 10;
+  this.status.health = 100;
+  this.status.healthMax = 100;
   this.status.moveSpeed = 4;
   this.status.moveCD = 0;
 
@@ -343,9 +327,11 @@ Hordelike.prototype.getScreen = function () {
   var status_str = 'WAVE:' + this.wave + ' TIME:' + Math.floor(time / 10) + ' HP:' + status.health + '/' + status.healthMax + ' SPD:' + status.moveSpeed;
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/' + status.ammo;
   weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + (time <= status.reloadCD ? status.reloadCD - time : status.reloadSpeed);
-  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '-' + status.rangeMax;
+  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '+' + status.rangeMax;
   status_str += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(status_str.length - 96);
   var items = this.items;
+  var range_num = status.rangeMin + Math.min(status.rangeMax, Math.floor(Math.max(0, (time - status.moveCD)) / status.rangeSpeed));
+  var enemies = this.enemies;
   return [ status_str.split(''), (this.message + Hordelike_EMPTY_LINE_STR).split('') ].concat(this.screen.map(function (row, y) {
     return row.map(function (tile, x) {
       if (tile !== ' ') {
@@ -354,7 +340,6 @@ Hordelike.prototype.getScreen = function () {
         return items[y][x].symbol;
       }
       var is_range = false;
-      var range_num = status.rangeMin + Math.min(status.rangeMax, Math.floor(Math.max(0, (time - status.moveCD)) / status.rangeSpeed));
       if (status.rangeType === 'A' && Math.abs(x - px) + Math.abs(y - py) < range_num) {
         is_range = true;
       } else if (status.rangeType === 'B' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
@@ -362,12 +347,29 @@ Hordelike.prototype.getScreen = function () {
       } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) + (Math.abs(y - py) || 0.5)  < range_num) {
         is_range = true;
       }
-      return is_range ? '.' : tile;
+      var is_enemy_range = enemies.some(function (enemy) {
+        var status = enemy.status;
+        var ex = enemy.x, ey = enemy.y;
+        var enemy_range_num = status.rangeMin + Math.min(status.rangeMax, Math.floor(Math.max(0, (time - status.moveCD)) / status.rangeSpeed));
+        if (status.rangeType === 'A' && Math.abs(x - ex) + Math.abs(y - ey) < enemy_range_num) {
+          return true;
+        } else if (status.rangeType === 'B' && (x - ex) * (x - ex) + (y - ey) * (y - ey) < enemy_range_num * enemy_range_num) {
+          return true;
+        } else if (status.rangeType === 'C' && (Math.abs(x - ex) || 0.5) + (Math.abs(y - ey) || 0.5)  < enemy_range_num) {
+          return true;
+        }
+        return false;
+      });
+      return is_range && is_enemy_range ? ';' : (is_enemy_range ? "," : (is_range ? '.' : tile) );
     });
   }));
 };
 
 Hordelike.prototype.key = function (key_str) {
+  if (this.status.health < 0) {
+    return true;
+  }
+
   if (key_str === 'w' || key_str === 'k') {
     return this.move(0, -1);
   } else if (key_str === 'a' || key_str === 'h') {
@@ -407,7 +409,7 @@ Hordelike.prototype.move = function (move_x, move_y) {
     var status = this.items[new_y][new_x];
     var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
     weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed;
-    weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '-' + status.rangeMax;
+    weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '+' + status.rangeMax;
     message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
     this.message = message;
   } else {
@@ -495,6 +497,33 @@ Hordelike.prototype.fire = function () {
   return true;
 };
 
+Hordelike.prototype.enemyFire = function (enemy) {
+  if (this.time <= enemy.status.fireCD) {
+    return false;
+  }
+  var x = enemy.x, y = enemy.y;
+  var px = this.x, py = this.y;
+  var status = enemy.status;
+  var range_num = status.rangeMin + Math.min(status.rangeMax, Math.floor(Math.max(0, (this.time - status.moveCD)) / status.rangeSpeed));
+  var is_range = false;
+  if (status.rangeType === 'A' && Math.abs(x - px) + Math.abs(y - py) < range_num) {
+    is_range = true;
+  } else if (status.rangeType === 'B' && (x - px) * (x - px) + (y - py) * (y - py) < range_num * range_num) {
+    is_range = true;
+  } else if (status.rangeType === 'C' && (Math.abs(x - px) || 0.5) + (Math.abs(y - py) || 0.5)  < range_num) {
+    is_range = true;
+  }
+  if (!is_range) {
+    return false;
+  }
+  this.status.health -= status.power;
+  enemy.status.fireCD = this.time + enemy.status.fireSpeed;
+  if (this.status.health < 0) {
+    this.message = 'You died.';
+  }
+  return true;
+};
+
 Hordelike.getWeaponFromStatus = function (status) {
   var weapon = {};
   weapon.symbol      = status.symbol;
@@ -503,6 +532,7 @@ Hordelike.getWeaponFromStatus = function (status) {
   weapon.capacity    = status.capacity;
   weapon.fireSpeed   = status.fireSpeed;
   weapon.reloadSpeed = status.reloadSpeed;
+  weapon.rangeSpeed  = status.rangeSpeed;
   weapon.rangeMin    = status.rangeMin;
   weapon.rangeMax    = status.rangeMax;
   weapon.rangeType   = status.rangeType;
@@ -516,6 +546,7 @@ Hordelike.setWeaponToStatus = function (status, weapon) {
   status.capacity    = weapon.capacity;
   status.fireSpeed   = weapon.fireSpeed;
   status.reloadSpeed = weapon.reloadSpeed;
+  status.rangeSpeed  = weapon.rangeSpeed;
   status.rangeMin    = weapon.rangeMin;
   status.rangeMax    = weapon.rangeMax;
   status.rangeType   = weapon.rangeType;
@@ -559,7 +590,7 @@ Hordelike.prototype.equip = function () {
   var status = old_weapon;
   var weapon_str = 'POW:' + status.power + ' CAP:' + status.magazine + '/' + status.capacity + '/**' ;
   weapon_str += ' SPD:' + status.fireSpeed + ' RLD:' + status.reloadSpeed;
-  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '-' + status.rangeMax;
+  weapon_str += ' RNG:' + status.rangeType + '/' + status.rangeSpeed + '/' + status.rangeMin + '+' + status.rangeMax;
   message += (Hordelike_EMPTY_LINE_STR + weapon_str).slice(message.length - 96);
   this.message = message;
 
@@ -569,32 +600,60 @@ Hordelike.prototype.equip = function () {
 };
 
 Hordelike.prototype.turn = function () {
-  this.time++;
-  if (this.time % 50 === 0) {
-    this.createEnemy();
+  if (this.status.health < 0) {
+    return true;
+  }
+
+  if (this.time % 1000 === 0) {
+    this.wave++;
+    this.spawnRate = 30 + Math.ceil(Math.random() * 50);
+    this.spawnSeed = Math.random();
+  } else if (this.time % 1000 < 500) {
+    if (this.time % this.spawnRate === 0) {
+      this.createEnemy(this.spawnSeed);
+    }
   }
   this.enemies = this.enemies.filter(function (enemy) {
     if (!enemy.dead) {
-      this.enemyMove(enemy);
+      this.enemyFire(enemy) || this.enemyMove(enemy);
       return true;
     }
   }, this);
+  this.time++;
   return true;
 };
 
-Hordelike.prototype.createEnemy = function () {
+var Hordelike_WAVE_SCALE = 6;
+Hordelike.prototype.createEnemy = function (rand_num) {
   var enemy = {};
   enemy.x = 0;
   enemy.y = 0;
   enemy.type = 'Z';
   enemy.status = {};
-  enemy.status.health = 10;
-  enemy.status.healthMax = 10;
-  enemy.status.moveSpeed = 8;
+  enemy.status.health = 10 * (Hordelike_WAVE_SCALE + this.wave) / Hordelike_WAVE_SCALE;
+  enemy.status.healthMax = 10 * (Hordelike_WAVE_SCALE + this.wave) / Hordelike_WAVE_SCALE;
+  enemy.status.moveSpeed = 10;
   enemy.status.moveCD = 0;
+  if (rand_num < 0.1) {
+    enemy.type = 'V';
+    enemy.status.health = Math.ceil(enemy.status.health * 2);
+    enemy.status.moveSpeed = 6;
+  } else if (rand_num < 0.25) {
+    enemy.type = 'r';
+    enemy.status.health = Math.ceil(enemy.status.health / 2);
+    enemy.status.moveSpeed = 4;
+  } else if (rand_num < 0.5) {
+    enemy.type = 'T';
+    enemy.status.health = Math.ceil(enemy.status.health * 2);
+    enemy.status.moveSpeed = 16;
+  } else if (rand_num < 0.75) {
+    enemy.type = 'G';
+    enemy.status.health = Math.ceil(enemy.status.health * 1.5);
+    enemy.status.moveSpeed = 12;
+  }
 
   enemy.status.symbol = '|';
-  enemy.status.power = 10;
+  enemy.status.power = Math.ceil(10 * (Hordelike_WAVE_SCALE + this.wave) / Hordelike_WAVE_SCALE);
   enemy.status.magazine = 10;
   enemy.status.capacity = 10;
   enemy.status.ammo = 100;
@@ -602,9 +661,27 @@ Hordelike.prototype.createEnemy = function () {
   enemy.status.fireCD = 0;
   enemy.status.reloadSpeed = 16;
   enemy.status.reloadCD = 0;
-  enemy.status.rangeMin = 1;
-  enemy.status.rangeMax = 10;
+  enemy.status.rangeSpeed = 12;
+  enemy.status.rangeMin = 3;
+  enemy.status.rangeMax = 6;
   enemy.status.rangeType = 'A';
+
+  if (rand_num * 100 % 100 < 10) {
+    enemy.status.symbol = '|';
+    enemy.status.magazine = 6;
+    enemy.status.capacity = 6;
+    enemy.status.power = Math.ceil(enemy.status.power * 2);
+    enemy.status.rangeType = 'A';
+  } else if (rand_num * 100 % 100 < 20) {
+    enemy.status.symbol = '=';
+    enemy.status.magazine = 30;
+    enemy.status.capacity = 30;
+    enemy.status.fireSpeed = 2;
+    enemy.status.power = Math.ceil(enemy.status.power / 2);
+    enemy.status.rangeType = 'A';
+  } else if (rand_num * 100 % 100 < 20) {
+    
+  }
 
   this.enemies.push(enemy);
   this.screen[enemy.y][enemy.x] = enemy.type;
